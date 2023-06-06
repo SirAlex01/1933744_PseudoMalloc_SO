@@ -7,7 +7,7 @@
 
 
 typedef struct  {
-  BitMap* bit_map; // to store the tree structure
+  BitMap bit_map; // to store the tree structure
   char * memory; // the memory area to be managed
   int num_levels; // the number of levels 
   int max_bucket_size; // the maximum number of bytes that can be returned

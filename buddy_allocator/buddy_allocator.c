@@ -35,6 +35,7 @@ void BuddyAllocator_init(BuddyAllocator* alloc,
   alloc->num_levels=num_levels;
   alloc->memory=memory;
   alloc->min_bucket_size=min_bucket_size;
+  alloc->max_bucket_size=max_bucket_size;
 
   // size of the managed memory
   int mem_size=((1<<(num_levels)))*min_bucket_size;
@@ -44,30 +45,29 @@ void BuddyAllocator_init(BuddyAllocator* alloc,
   int nodes_for_each_tree=(max_bucket_size/min_bucket_size)*2-1;
   int depth_for_each_tree=log(max_bucket_size/min_bucket_size)/log(2);
 
-
-
   // we need enough bits to store #roots trees with blocks of sizes from max to min
   int bits_needed=roots*nodes_for_each_tree;
 
   // we use the mmap to get enough bytes to store the bitmap
-  uint8_t* bit_map_buffer = (char*) mmap(NULL,
-				                            BitMap_getBytes(bits_needed),
-				                            PROT_READ|PROT_WRITE,
-				                            MAP_PRIVATE,
-				                            -1,
-				                            0);
+  uint8_t* bit_map_buffer = (uint8_t*) mmap(NULL,
+				                               BitMap_getBytes(bits_needed),
+				                               PROT_READ|PROT_WRITE,
+                                       MAP_PRIVATE | MAP_ANONYMOUS,
+				                               -1,
+				                               0);
   assert(bit_map_buffer != MAP_FAILED);
 
   // creating the bitmap
-  BitMap_init(alloc->bit_map,bits_needed,bit_map_buffer);
+  BitMap_init(&alloc->bit_map,bits_needed,bit_map_buffer);
 
   // initializing the bitmap: all blocks free :) (not for a long time though)
   for (int bit_num=0; bit_num<bits_needed; bit_num++)
-    BitMap_setBit(alloc->bit_map,bit_num,0);
+    BitMap_setBit(&alloc->bit_map,bit_num,0);
+
 
   printf("BUDDY INITIALIZING\n");
   printf("\tlevels: %d", num_levels);
-  printf("\tmax buclet size %d bytes\n", max_bucket_size);
+  printf("\tmax bucket size %d bytes\n", max_bucket_size);
   printf("\tbucket size:%d\n", min_bucket_size);
   printf("\tmanaged memory %d bytes\n", (1<<num_levels)*min_bucket_size);
   
@@ -75,13 +75,13 @@ void BuddyAllocator_init(BuddyAllocator* alloc,
 
 
 int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
+
   // il livello deve essere consentito
   int mem_size=((1<<(alloc->num_levels)))*alloc->min_bucket_size;
 
   // number of roots with depth for each tree
   int roots = mem_size/(alloc->max_bucket_size);
   int nodes_for_each_tree=(alloc->max_bucket_size/alloc->min_bucket_size)*2-1;
-
 
 
   //assert(level <= alloc->num_levels);
@@ -93,27 +93,39 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
   // ciclo tra gli alberi con radice di max_bucket_size
   // l'albero è tagliato a partire dalla dimensione massima allocabile
   // cioè page_size/4
+  printf("%d,%d\n",BitMap_bit(&alloc->bit_map,3),start_index);
   for (int i=0;i<roots;i++) {
     // controllo in sequenza i #level_buddies buddies del livello #level
     for (int j=0;j<level_buddies;) {
       int buddy_idx=start_index+j;
 
-      if (!BitMap_bit(alloc->bit_map,buddy_idx)) {
+      if (!BitMap_bit(&alloc->bit_map,buddy_idx)) {
+
+        printf("%d\n",buddy_idx);
         //il buddy è libero per l'allocazione
-        BitMap_setBit(alloc->bit_map,buddy_idx,1);
+        BitMap_setBit(&alloc->bit_map,buddy_idx,1);
 
         //ora bisogna notificare l'allocazione di tutti i nodi padre
         int father_idx=(level_buddies-1+j)/2;
 
         //comincio dal padre, se uno degli antenati è già allocato, assumo
         //quelli superiori già segnati come allocati
-        while (!BitMap_bit(alloc->bit_map,start_index + father_idx) && father_idx>=0) {
-          BitMap_setBit(alloc->bit_map,start_index + father_idx,1);
+        while (!BitMap_bit(&alloc->bit_map,i*nodes_for_each_tree + father_idx) && father_idx>=0) {
+          printf("%d\n",i*nodes_for_each_tree+father_idx);
+          BitMap_setBit(&alloc->bit_map,i*nodes_for_each_tree + father_idx,0x01);
           father_idx=(father_idx-1+j)/2;
+          printf("%d,%d\n",father_idx,BitMap_bit(&alloc->bit_map,i*nodes_for_each_tree+father_idx));
+          for (int i=0;i<10;i++){
+          printf("%d,%d\n",i,BitMap_bit(&alloc->bit_map,i));
         }
+        }
+        printf("%d,%d fiine\n",father_idx,BitMap_bit(&alloc->bit_map,start_index + father_idx));
+        
+                return 0;
+
 
         //e di quelli figli, con l'ausilio della ricorsione
-        BuddyAllocator_setSuccessorBits(alloc->bit_map,1,i*nodes_for_each_tree,j,(i+1)*nodes_for_each_tree);
+        BuddyAllocator_setSuccessorBits(&alloc->bit_map,1,i*nodes_for_each_tree,j,(i+1)*nodes_for_each_tree);
 
         return buddy_idx;
       }
@@ -153,6 +165,7 @@ int BuddyAllocator_getBuddy(BuddyAllocator* alloc, int level){
 // a ogni nodo attraversato segnala come occupato il buddy
 int BuddyAllocator_setSuccessorBits(BitMap* bitmap,int bit_value, int start,int index, int end) {
   //caso base: siamo arrivati all'inizio del buddy successivo, abbiamo finito
+  return 0;
   if (start+(2*index+1)>=end)
     return 0;
   BitMap_setBit(bitmap, start+(index*2+1), bit_value);
@@ -174,19 +187,19 @@ void BuddyAllocator_releaseBuddy(BuddyAllocator* alloc, int block_idx){
   //indice di inizio dell'albero
   int start_idx=((int)(block_idx/nodes_for_each_tree))*nodes_for_each_tree;
   
-  BitMap_setBit(alloc->bit_map, block_idx,0);
+  BitMap_setBit(&alloc->bit_map, block_idx,0);
 
   //indice del padre e del buddy nell'albero
   int father_idx=(tree_idx-1)/2;
   int buddy_idx = (tree_idx % 2)? tree_idx-1 : tree_idx+1;
 
-  while (father_idx>=0 && !BitMap_bit(alloc->bit_map,start_idx+buddy_idx)) {
-    BitMap_setBit(alloc->bit_map,start_idx+father_idx,0);
+  while (father_idx>=0 && !BitMap_bit(&alloc->bit_map,start_idx+buddy_idx)) {
+    BitMap_setBit(&alloc->bit_map,start_idx+father_idx,0);
     buddy_idx=(father_idx % 2)? father_idx-1 : father_idx+1;
     father_idx=(father_idx-1)/2;
   }
 
-  BuddyAllocator_setSuccessorBits(alloc->bit_map,0,start_idx,tree_idx,start_idx+nodes_for_each_tree);
+  BuddyAllocator_setSuccessorBits(&alloc->bit_map,0,start_idx,tree_idx,start_idx+nodes_for_each_tree);
 
   /*
 
@@ -251,7 +264,7 @@ void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size) {
 
   char* res = alloc->memory+(offset*alloc->max_bucket_size+level_size*(tree_idx-start_idx));
 
-  int* buddy_idx_saver = res;
+  int* buddy_idx_saver = (int*)res;
   *buddy_idx_saver=buddy;
 
   return res+4;
