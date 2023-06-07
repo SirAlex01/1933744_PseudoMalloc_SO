@@ -1,15 +1,35 @@
 #include "buddy_allocator.h"
 #include <stdio.h>
 #include "math.h"
+#include <stdlib.h>
 
 #define MEMORY_SIZE (1024*1024)
 #define MIN_BUCKET_SIZE (8)
 #define PAGE_SIZE 4096
 
-char memory[MEMORY_SIZE];
+unsigned char memory[MEMORY_SIZE];
 
 BuddyAllocator alloc;
 int main(int argc, char** argv) {
+
+  //Bitmap test
+ //per il momento uso la malloc esplicita, poi probabilmente userò quella da me definita
+  BitMap bitmap;
+  printf("%d\n",BitMap_getBytes(100));
+  uint8_t* buffer=(uint8_t*)malloc(sizeof(uint8_t)*BitMap_getBytes(100));
+  BitMap_init(&bitmap,100,buffer);
+
+  for (int i=0;i<100;i++)
+      BitMap_setBit(&bitmap,i,0);
+
+  BitMap_setBit(&bitmap,3,1);
+  
+  for (int i=0;i<10;i++)
+      printf("%d,%d\n",i,BitMap_bit(&bitmap,i));
+
+  free(buffer);
+
+  free(NULL);
 
   //1 we see if we have enough memory for the buffers
   //int req_size=BuddyAllocator_calcSize(BUDDY_LEVELS);
@@ -25,6 +45,14 @@ int main(int argc, char** argv) {
                       PAGE_SIZE/4,
                       MIN_BUCKET_SIZE);
   printf("DONE\n");
+
+  printf("getting buddy of depth 0\n");
+  int item0_1=BuddyAllocator_getBuddy(&alloc, 0);
+  printf("%d\n",item0_1);
+
+  printf("getting buddy of depth 0\n");
+  int item0_2=BuddyAllocator_getBuddy(&alloc, 0);
+  printf("%d\n",item0_2);
   
   // we request two buddies of the smallest size
   printf("getting buddy of depth 7\n");
@@ -62,8 +90,29 @@ int main(int argc, char** argv) {
   printf("%d\n",item7_1);
   printf("releasing a buddy of depth 7\n");
   BuddyAllocator_releaseBuddy(&alloc, item7_1);
-  
 
-  
-  
+  printf("releasing a buddy of depth 0\n");
+  BuddyAllocator_releaseBuddy(&alloc, item0_1);
+  printf("releasing a buddy of depth 0\n");
+  BuddyAllocator_releaseBuddy(&alloc, item0_2);
+
+  printf("getting buddy of depth 7\n");
+  item7_1=BuddyAllocator_getBuddy(&alloc, 7);
+  printf("%d\n",item7_1);
+
+  printf("getting buddy of depth 1\n");
+  int item1_1=BuddyAllocator_getBuddy(&alloc, 1);
+  printf("%d\n",item1_1);
+
+  printf("releasing a buddy of depth 7\n");
+  BuddyAllocator_releaseBuddy(&alloc, item7_1);
+
+  printf("releasing a buddy of depth 1\n");
+  BuddyAllocator_releaseBuddy(&alloc, item1_1);
+  /*
+  for (int i=0;i<4*MEMORY_SIZE/PAGE_SIZE  +1 ;i++) {
+    int all_buddies = BuddyAllocator_getBuddy(&alloc, 0);
+    printf("%d\n",all_buddies);
+  }
+  */
 }

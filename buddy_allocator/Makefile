@@ -2,16 +2,14 @@ CC=gcc
 CCOPTS=--std=gnu99 -Wall -D_LIST_DEBUG_ 
 AR=ar
 
-OBJS=pool_allocator.o\
-     linked_list.o\
-     bit_map.o\
+OBJS=bit_map.o\
      buddy_allocator.o
 
-HEADERS=linked_list.h  pool_allocator.h bit_map.h buddy_allocator.h
+HEADERS=bit_map.h buddy_allocator.h
 
 LIBS=libbuddy.a
 
-BINS=pool_allocator_test buddy_test buddy_allocator_test
+BINS= buddy_test buddy_allocator_test
 
 .phony: clean all
 

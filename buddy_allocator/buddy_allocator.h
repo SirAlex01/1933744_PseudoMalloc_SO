@@ -1,14 +1,9 @@
 #pragma once
-#include "pool_allocator.h"
-#include "linked_list.h"
 #include "bit_map.h"
-
-#define MAX_LEVELS 16
-
 
 typedef struct  {
   BitMap bit_map; // to store the tree structure
-  char * memory; // the memory area to be managed
+  unsigned char * memory; // the memory area to be managed
   int num_levels; // the number of levels 
   int max_bucket_size; // the maximum number of bytes that can be returned
   int min_bucket_size; // the minimum number of bytes that can be returned
@@ -19,7 +14,7 @@ int BuddyAllocator_setSuccessorBits(BitMap* bitmap,int bit_value, int start, int
 
 // initializes the buddy allocator, and checks that the buffer is large enough
 void BuddyAllocator_init(BuddyAllocator* alloc,
-                         char* memory,
+                         unsigned char* memory,
                          int num_levels, 
                          int max_bucket_size,
                          int min_bucket_size);
@@ -37,4 +32,4 @@ void BuddyAllocator_releaseBuddy(BuddyAllocator* alloc, int block_idx);
 void* BuddyAllocator_malloc(BuddyAllocator* alloc, int size);
 
 //releases allocated memory
-void BuddyAllocator_free(BuddyAllocator* alloc, char* mem);
+void BuddyAllocator_free(BuddyAllocator* alloc, void* mem);
