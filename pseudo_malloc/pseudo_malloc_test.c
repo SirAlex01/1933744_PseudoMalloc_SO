@@ -16,10 +16,12 @@ int main(){
     p2=pseudo_malloc(1019);
 
     pseudo_free(p1);
+    //pseudo_free(p1+1);
 
     p1=pseudo_malloc(510);
 
     pseudo_free(p1);
+    //pseudo_free(p1+1);
     pseudo_free(p2);
     pseudo_free(p3);
 }

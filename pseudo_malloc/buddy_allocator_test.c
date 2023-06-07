@@ -59,8 +59,13 @@ int main(int argc, char** argv) {
   //BuddyAllocator_free(&alloc, p6);
   /*
   //prova allocazione di tutta la memoria disponibile (+1)
-  for (int i=0;i<=4*MEMORY_SIZE/PAGE_SIZE;i++) {
+  for (int i=0;i<4*MEMORY_SIZE/PAGE_SIZE-1;i++) {
     void* p=BuddyAllocator_malloc(&alloc,509);
+    printf("%p,%p\n",p,p+1024);
+    //BuddyAllocator_free(&alloc,p);
+  }
+  for (int i=0;i<129;i++) {
+    void* p=BuddyAllocator_malloc(&alloc,4);
     printf("%p,%p\n",p,p+1024);
     //BuddyAllocator_free(&alloc,p);
   }
