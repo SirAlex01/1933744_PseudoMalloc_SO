@@ -26,6 +26,7 @@ int main(int argc, char** argv) {
 
   
   void* p1=BuddyAllocator_malloc(&alloc, 1);
+  printf("%d,%d\n",BuddyAllocator_isMyBlock(&alloc,p1),BuddyAllocator_isMyBlock(&alloc,p1+MEMORY_SIZE-8+4));
   void* p2=BuddyAllocator_malloc(&alloc, 100);
   void* p3=BuddyAllocator_malloc(&alloc, 1000);
   BuddyAllocator_free(&alloc, p1);

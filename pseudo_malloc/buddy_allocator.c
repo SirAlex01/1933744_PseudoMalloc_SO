@@ -27,7 +27,6 @@ void BuddyAllocator_init(BuddyAllocator* alloc,
   int bits_needed=roots*nodes_for_each_tree;
 
   // we use the mmap to get enough bytes to store the bitmap
-  //uint8_t bit_map_buffer[BitMap_getBytes(bits_needed)];
   
   uint8_t* bit_map_buffer = (uint8_t*) mmap(NULL,
 				                               BitMap_getBytes(bits_needed),
@@ -324,6 +323,7 @@ void BuddyAllocator_free(BuddyAllocator* alloc, void* mem) {
 }
 
 int BuddyAllocator_isMyBlock(BuddyAllocator* alloc, void* mem) {
+  mem=mem-4;
   int mem_size=(1<<(alloc->num_levels))*alloc->min_bucket_size;
   return mem>=(void*)alloc->memory && mem < (void*)alloc->memory+mem_size;
 }

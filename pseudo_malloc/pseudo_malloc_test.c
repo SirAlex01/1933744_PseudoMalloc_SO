@@ -24,4 +24,11 @@ int main(){
     //pseudo_free(p1+1);
     pseudo_free(p2);
     pseudo_free(p3);
+    /*
+    for (int i=0;i<=(1024);i++) {
+      p1=pseudo_malloc(509);
+      printf("%p\n",p1);
+    }
+    */
+      
 }
